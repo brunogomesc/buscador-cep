@@ -1,19 +1,22 @@
 import '@testing-library/jest-dom';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { act } from 'react-dom/test-utils';
 import App from './App';
 import api from './services/api';
 
 jest.mock('./services/api', () => ({
-  get: jest.fn(),
+  __esModule: true,
+  default: {
+    get: jest.fn(),
+  },
 }));
 
-describe('App CEP search validation', () => {
+describe('App', () => {
   let alertSpy;
 
   beforeEach(() => {
-    alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
     api.get.mockReset();
+    alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -32,138 +35,106 @@ describe('App CEP search validation', () => {
     return input;
   }
 
-  it('normalizes a CEP typed with a hyphen', async () => {
-    api.get.mockResolvedValue({ data: { cep: '01001-000' } });
-    await searchFor('01001-000');
-    expect(api.get).toHaveBeenCalledWith('01001000/json');
-    expect(alertSpy).not.toHaveBeenCalled();
+  describe('input validation', () => {
+    it('normalizes a CEP typed with a hyphen', async () => {
+      api.get.mockResolvedValue({ data: { cep: '01001-000' } });
+      await searchFor('01001-000');
+      expect(api.get).toHaveBeenCalledWith('01001000/json');
+      expect(alertSpy).not.toHaveBeenCalled();
+    });
+
+    it('normalizes a CEP surrounded by spaces', async () => {
+      api.get.mockResolvedValue({ data: { cep: '01001-000' } });
+      await searchFor(' 01001000 ');
+      expect(api.get).toHaveBeenCalledWith('01001000/json');
+    });
+
+    it('strips path-breaking characters before building the url', async () => {
+      api.get.mockResolvedValue({ data: { cep: '01001-000' } });
+      await searchFor('01001/000?#');
+      expect(api.get).toHaveBeenCalledWith('01001000/json');
+    });
+
+    it('clears the input after a successful search', async () => {
+      api.get.mockResolvedValue({ data: { cep: '01001-000' } });
+      const input = await searchFor('01001000');
+      expect(input).toHaveValue('');
+    });
+
+    it('does not call the api when the input is only spaces', async () => {
+      const input = await searchFor('   ');
+      expect(api.get).not.toHaveBeenCalled();
+      expect(alertSpy).toHaveBeenCalledWith('Preencha algum CEP!');
+      expect(input).toHaveValue('   ');
+    });
+
+    it('does not call the api when the input is empty', async () => {
+      await searchFor('');
+      expect(api.get).not.toHaveBeenCalled();
+      expect(alertSpy).toHaveBeenCalledWith('Preencha algum CEP!');
+    });
+
+    it.each(['1234', '123456789'])('rejects a CEP with an invalid length: %s', async (value) => {
+      const input = await searchFor(value);
+      expect(api.get).not.toHaveBeenCalled();
+      expect(alertSpy).toHaveBeenCalledWith('CEP deve ter 8 dígitos');
+      expect(input).toHaveValue(value);
+    });
   });
 
-  it('normalizes a CEP surrounded by spaces', async () => {
-    api.get.mockResolvedValue({ data: { cep: '01001-000' } });
-    await searchFor(' 01001000 ');
-    expect(api.get).toHaveBeenCalledWith('01001000/json');
-  });
+  describe('api results', () => {
+    it('shows "CEP não encontrado" and renders no result card when ViaCEP returns {erro: true}', async () => {
+      api.get.mockResolvedValue({ data: { erro: true } });
 
-  it('strips path-breaking characters before building the url', async () => {
-    api.get.mockResolvedValue({ data: { cep: '01001-000' } });
-    await searchFor('01001/000?#');
-    expect(api.get).toHaveBeenCalledWith('01001000/json');
-  });
+      render(<App />);
 
-  it('clears the input after a successful search', async () => {
-    api.get.mockResolvedValue({ data: { cep: '01001-000' } });
-    const input = await searchFor('01001000');
-    expect(input).toHaveValue('');
-  });
+      fireEvent.change(screen.getByPlaceholderText('Digite seu CEP...'), {
+        target: { value: '99999999' },
+      });
+      fireEvent.click(screen.getByRole('button'));
 
-  it('does not call the api when the input is only spaces', async () => {
-    const input = await searchFor('   ');
-    expect(api.get).not.toHaveBeenCalled();
-    expect(alertSpy).toHaveBeenCalledWith('Preencha algum CEP!');
-    expect(input).toHaveValue('   ');
-  });
+      await waitFor(() => {
+        expect(alertSpy).toHaveBeenCalledWith('CEP não encontrado');
+      });
 
-  it('does not call the api when the input is empty', async () => {
-    await searchFor('');
-    expect(api.get).not.toHaveBeenCalled();
-    expect(alertSpy).toHaveBeenCalledWith('Preencha algum CEP!');
-  });
+      expect(screen.queryByText(/^CEP:/)).toBeNull();
+      expect(screen.queryByText(/Logradouro:/)).toBeNull();
+      expect(screen.getByPlaceholderText('Digite seu CEP...').value).toBe('');
+    });
 
-  it.each(['1234', '123456789'])('rejects a CEP with an invalid length: %s', async (value) => {
-    const input = await searchFor(value);
-    expect(api.get).not.toHaveBeenCalled();
-    expect(alertSpy).toHaveBeenCalledWith('CEP deve ter 8 dígitos');
-    expect(input).toHaveValue(value);
-  });
+    it('renders the result card for a valid CEP and falls back to "-" for empty/missing fields', async () => {
+      api.get.mockResolvedValue({
+        data: {
+          cep: '01001-000',
+          logradouro: 'Praça da Sé',
+          complemento: '',
+          bairro: 'Sé',
+          localidade: 'SP',
+        },
+      });
 
-  it('keeps the original error alert when the request fails', async () => {
-    api.get.mockRejectedValue(new Error('network'));
-    const input = await searchFor('01001000');
-    expect(alertSpy).toHaveBeenCalledWith('Ops! Erro ao buscar CEP!');
-    expect(input).toHaveValue('');
+      render(<App />);
+
+      fireEvent.change(screen.getByPlaceholderText('Digite seu CEP...'), {
+        target: { value: '01001000' },
+      });
+      fireEvent.click(screen.getByRole('button'));
+
+      await waitFor(() => {
+        expect(screen.getByText(/^CEP:/)).toBeTruthy();
+      });
+
+      expect(screen.getByText(/^CEP:/).textContent).toContain('01001-000');
+      expect(screen.getByText(/^Complemento:/).textContent).toContain('-');
+      expect(alertSpy).not.toHaveBeenCalled();
+    });
+
+    it('keeps the original error alert when the request fails', async () => {
+      api.get.mockRejectedValue(new Error('network'));
+      const input = await searchFor('01001000');
+      expect(alertSpy).toHaveBeenCalledWith('Ops! Erro ao buscar CEP!');
+      expect(input).toHaveValue('');
+      expect(screen.queryByText(/^CEP:/)).toBeNull();
+    });
   });
 });
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import App from './App'
-import api from './services/api'
-
-jest.mock('./services/api', () => ({
-  __esModule: true,
-  default: {
-    get: jest.fn()
-  }
-}))
-
-describe('App', () => {
-  let alertSpy
-
-  beforeEach(() => {
-    jest.clearAllMocks()
-    alertSpy = jest.fn()
-    window.alert = alertSpy
-  })
-
-  it('shows "CEP não encontrado" and renders no result card when ViaCEP returns {erro: true}', async () => {
-    api.get.mockResolvedValue({ data: { erro: true } })
-
-    render(<App />)
-
-    fireEvent.change(screen.getByPlaceholderText('Digite seu CEP...'), {
-      target: { value: '99999999' }
-    })
-    fireEvent.click(screen.getByRole('button'))
-
-    await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith('CEP não encontrado')
-    })
-
-    expect(screen.queryByText(/^CEP:/)).toBeNull()
-    expect(screen.queryByText(/Logradouro:/)).toBeNull()
-    expect(screen.getByPlaceholderText('Digite seu CEP...').value).toBe('')
-  })
-
-  it('renders the result card for a valid CEP and falls back to "-" for empty/missing fields', async () => {
-    api.get.mockResolvedValue({
-      data: {
-        cep: '01001-000',
-        logradouro: 'Praça da Sé',
-        complemento: '',
-        bairro: 'Sé',
-        localidade: 'SP'
-      }
-    })
-
-    render(<App />)
-
-    fireEvent.change(screen.getByPlaceholderText('Digite seu CEP...'), {
-      target: { value: '01001000' }
-    })
-    fireEvent.click(screen.getByRole('button'))
-
-    await waitFor(() => {
-      expect(screen.getByText(/^CEP:/)).toBeTruthy()
-    })
-
-    expect(screen.getByText(/^CEP:/).textContent).toContain('01001-000')
-    expect(screen.getByText(/^Complemento:/).textContent).toContain('-')
-    expect(alertSpy).not.toHaveBeenCalled()
-  })
-
-  it('keeps the existing behavior on HTTP failure (catch branch)', async () => {
-    api.get.mockRejectedValue(new Error('network'))
-
-    render(<App />)
-
-    fireEvent.change(screen.getByPlaceholderText('Digite seu CEP...'), {
-      target: { value: '01001000' }
-    })
-    fireEvent.click(screen.getByRole('button'))
-
-    await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith('Ops! Erro ao buscar CEP!')
-    })
-
-    expect(screen.queryByText(/^CEP:/)).toBeNull()
-  })
-})

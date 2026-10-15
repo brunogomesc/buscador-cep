@@ -1,5 +1,36 @@
-* {
-  margin: 0;
-  padding: 0;
-  font-family: sans-serif;
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --navy-950: #050a1c;
+  --navy-900: #070d24;
+  --navy-800: #0b1a45;
+  --navy-700: #12255c;
+  --blue: #19d2fa;
+  --blue-deep: #2f8cff;
+  --coral: #ff6b52;
+  --orange: #ff9a4d;
+  --text: #e8edff;
+  --muted: #9aa8d1;
+  --line: rgba(120, 160, 255, .16);
+  --card: rgba(18, 37, 92, .38);
+  --radius: 22px;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --grad: linear-gradient(100deg, var(--blue) 0%, #6aa8ff 45%, var(--coral) 100%);
 }
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Montserrat", system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--navy-900);
+  color: var(--text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+a { color: inherit; text-decoration: none; }
+h1, h2, p { margin: 0; }
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; border-radius: 6px; }
