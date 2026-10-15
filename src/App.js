@@ -15,9 +15,18 @@ function App() {
     }
     try {
       const response = await api.get(`${input}/json`)
+
+      if (response.data.erro) {
+        setCep({})
+        alert("Ops! Erro ao buscar CEP!")
+        setInput("")
+        return
+      }
+
       setCep(response.data)
       setInput("")
     } catch (error) {
+      setCep({})
       alert("Ops! Erro ao buscar CEP!")
       setInput("")
     }
