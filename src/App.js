@@ -48,7 +48,7 @@ function App() {
             <span className="brand__txt"><b className="c-blue">DEV</b><b>CORE</b> <b className="c-coral">HUB</b></span>
           </a>
           <a href={SYSTEMS_URL} className="back">
-            <FiArrowLeft size={16} aria-hidden="true" /> Todos os sistemas
+            <FiArrowLeft size={16} aria-hidden="true" /> Sistemas
           </a>
         </div>
       </header>
