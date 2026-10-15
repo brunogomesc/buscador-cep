@@ -19,17 +19,19 @@ function App() {
       return;
     }
     try {
-      const response = await api.get(`${digits}/json`)
+
+      const response = await api.get(`${input}/json`)
 
       if (response.data.erro) {
-        alert('CEP não encontrado')
         setCep({})
+        alert("Ops! Erro ao buscar CEP!")
         setInput("")
         return
       }
       setCep(response.data)
       setInput("")
     } catch (error) {
+      setCep({})
       alert("Ops! Erro ao buscar CEP!")
       setInput("")
     }
