@@ -15,6 +15,12 @@ function App() {
     }
     try {
       const response = await api.get(`${input}/json`)
+      if (response.data.erro) {
+        alert('CEP não encontrado')
+        setCep({})
+        setInput("")
+        return
+      }
       setCep(response.data)
       setInput("")
     } catch (error) {
@@ -39,31 +45,11 @@ function App() {
       </div>
       {Object.keys(cep).length > 0 && (
         <main className='main'>
-          {
-            cep.cep === "" /* Condição */
-            ? <h2>CEP: - </h2> /* Se for verdadeira */
-            : <h2>CEP: {cep.cep}</h2> /* Se for falsa */
-          }
-          {
-            cep.logradouro === "" /* Condição */
-            ? <span>Logradouro: - </span> /* Se for verdadeira */
-            : <span>Logradouro: {cep.logradouro}</span> /* Se for falsa */
-          }
-          {
-            cep.complemento === "" /* Condição */
-            ? <span>Complemento: - </span> /* Se for verdadeira */
-            : <span>Complemento: {cep.complemento}</span> /* Se for falsa */
-          }
-          {
-            cep.bairro === "" /* Condição */
-            ? <span>Bairro: - </span> /* Se for verdadeira */
-            : <span>Bairro: {cep.bairro}</span> /* Se for falsa */
-          }
-          {
-            cep.localidade === "" /* Condição */
-            ? <span>Localidade: - </span> /* Se for verdadeira */
-            : <span>Localidade: {cep.localidade}</span> /* Se for falsa */
-          }
+          <h2>CEP: {cep.cep || '-'}</h2>
+          <span>Logradouro: {cep.logradouro || '-'}</span>
+          <span>Complemento: {cep.complemento || '-'}</span>
+          <span>Bairro: {cep.bairro || '-'}</span>
+          <span>Localidade: {cep.localidade || '-'}</span>
         </main>
       )}
     </div>
