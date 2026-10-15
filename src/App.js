@@ -9,12 +9,18 @@ function App() {
   const [cep, setCep] = useState({})
 
   async function handleSearch() {
-    if(input === '') {
+    const digits = input.replace(/\D/g, '')
+    if(digits.length === 0) {
       alert("Preencha algum CEP!");
       return;
     }
+    if(digits.length !== 8) {
+      alert("CEP deve ter 8 dígitos");
+      return;
+    }
     try {
-      const response = await api.get(`${input}/json`)
+      const response = await api.get(`${digits}/json`)
+
       if (response.data.erro) {
         alert('CEP não encontrado')
         setCep({})
@@ -36,6 +42,8 @@ function App() {
         <input 
           type="text" 
           placeholder="Digite seu CEP..." 
+          inputMode="numeric"
+          maxLength={9}
           value={input} 
           onChange={(event)=>{setInput(event.target.value)}}
         />
