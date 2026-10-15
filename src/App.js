@@ -33,6 +33,7 @@ function App() {
       setCep(response.data)
       setInput("")
     } catch (error) {
+      setCep({})
       alert("Ops! Erro ao buscar CEP!")
       setInput("")
     }

@@ -137,4 +137,43 @@ describe('App', () => {
       expect(screen.queryByText(/^CEP:/)).toBeNull();
     });
   });
+
+  describe('previous result', () => {
+    const previousResult = {
+      cep: '01001-000',
+      logradouro: 'Praça da Sé',
+      complemento: 'lado ímpar',
+      bairro: 'Sé',
+      localidade: 'São Paulo',
+    };
+
+    async function searchAgain(value) {
+      fireEvent.change(screen.getByPlaceholderText('Digite seu CEP...'), { target: { value } });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button'));
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+    }
+
+    it('removes the previous result when the request fails', async () => {
+      api.get.mockResolvedValueOnce({ data: previousResult });
+      render(<App />);
+      await searchAgain('01001000');
+      expect(screen.getByText('CEP: 01001-000')).toBeInTheDocument();
+
+      api.get.mockRejectedValueOnce(new Error('network error'));
+      await searchAgain('99999999');
+      expect(screen.queryByText('CEP: 01001-000')).toBeNull();
+    });
+
+    it('removes the previous result when ViaCEP replies with erro: true', async () => {
+      api.get.mockResolvedValueOnce({ data: previousResult });
+      render(<App />);
+      await searchAgain('01001000');
+
+      api.get.mockResolvedValueOnce({ data: { erro: true } });
+      await searchAgain('99999999');
+      expect(screen.queryByText('CEP: 01001-000')).toBeNull();
+    });
+  });
 });
