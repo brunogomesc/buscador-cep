@@ -9,11 +9,17 @@ function App() {
   const [cep, setCep] = useState({})
 
   async function handleSearch() {
-    if(input === '') {
+    const digits = input.replace(/\D/g, '')
+    if(digits.length === 0) {
       alert("Preencha algum CEP!");
       return;
     }
+    if(digits.length !== 8) {
+      alert("CEP deve ter 8 dígitos");
+      return;
+    }
     try {
+
       const response = await api.get(`${input}/json`)
 
       if (response.data.erro) {
@@ -22,7 +28,6 @@ function App() {
         setInput("")
         return
       }
-
       setCep(response.data)
       setInput("")
     } catch (error) {
@@ -39,6 +44,8 @@ function App() {
         <input 
           type="text" 
           placeholder="Digite seu CEP..." 
+          inputMode="numeric"
+          maxLength={9}
           value={input} 
           onChange={(event)=>{setInput(event.target.value)}}
         />
@@ -48,31 +55,11 @@ function App() {
       </div>
       {Object.keys(cep).length > 0 && (
         <main className='main'>
-          {
-            cep.cep === "" /* Condição */
-            ? <h2>CEP: - </h2> /* Se for verdadeira */
-            : <h2>CEP: {cep.cep}</h2> /* Se for falsa */
-          }
-          {
-            cep.logradouro === "" /* Condição */
-            ? <span>Logradouro: - </span> /* Se for verdadeira */
-            : <span>Logradouro: {cep.logradouro}</span> /* Se for falsa */
-          }
-          {
-            cep.complemento === "" /* Condição */
-            ? <span>Complemento: - </span> /* Se for verdadeira */
-            : <span>Complemento: {cep.complemento}</span> /* Se for falsa */
-          }
-          {
-            cep.bairro === "" /* Condição */
-            ? <span>Bairro: - </span> /* Se for verdadeira */
-            : <span>Bairro: {cep.bairro}</span> /* Se for falsa */
-          }
-          {
-            cep.localidade === "" /* Condição */
-            ? <span>Localidade: - </span> /* Se for verdadeira */
-            : <span>Localidade: {cep.localidade}</span> /* Se for falsa */
-          }
+          <h2>CEP: {cep.cep || '-'}</h2>
+          <span>Logradouro: {cep.logradouro || '-'}</span>
+          <span>Complemento: {cep.complemento || '-'}</span>
+          <span>Bairro: {cep.bairro || '-'}</span>
+          <span>Localidade: {cep.localidade || '-'}</span>
         </main>
       )}
     </div>
